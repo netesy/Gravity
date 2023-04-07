@@ -129,6 +129,11 @@ def parse(tokens):
     return ast
 
 
+def debug(ast):
+    for node in ast:
+        print(node)
+
+
 def interpret(ast):
     variables = {}
     for node in ast:
@@ -157,7 +162,14 @@ def interpret(ast):
             if node in variables:
                 interpret(variables[node])
             else:
-                print(node)
+                if node[0] == "print":
+                    print(eval_expression(node[1], variables))
+                elif node[0] == "var":
+                    variables[node[1]] = eval_expression(node[2], variables)
+                elif node[0] == "assign":
+                    variables[node[1]] = eval_expression(node[2], variables)
+                elif node[0] == "return":
+                    return eval_expression(node[1], variables)
 
 
 def eval_expression(expr, variables):

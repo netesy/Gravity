@@ -1,62 +1,6 @@
 # Define the syntax of the language
 keywords = ["if", "else", "while", "for", "function"]
 operators = ["+", "-", "*", "/", "==", "!=", "<", ">", "<=", ">="]
-whitespace = [" ", "\t", "\n"]
-digits = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
-letters = [
-    "a",
-    "b",
-    "c",
-    "d",
-    "e",
-    "f",
-    "g",
-    "h",
-    "i",
-    "j",
-    "k",
-    "l",
-    "m",
-    "n",
-    "o",
-    "p",
-    "q",
-    "r",
-    "s",
-    "t",
-    "u",
-    "v",
-    "w",
-    "x",
-    "y",
-    "z",
-    "A",
-    "B",
-    "C",
-    "D",
-    "E",
-    "F",
-    "G",
-    "H",
-    "I",
-    "J",
-    "K",
-    "L",
-    "M",
-    "N",
-    "O",
-    "P",
-    "Q",
-    "R",
-    "S",
-    "T",
-    "U",
-    "V",
-    "W",
-    "X",
-    "Y",
-    "Z",
-]
 
 # Write a lexer
 def lexer(code):
@@ -65,13 +9,11 @@ def lexer(code):
     i = 0
     while i < len(code):
         char = code[i]
-        if char in whitespace:
+        if char.isspace():
             if current_token:
                 tokens.append(current_token)
                 current_token = ""
-        elif char in digits:
-            current_token += char
-        elif char in letters:
+        elif char.isdigit() or char.isalpha():
             current_token += char
         elif char in operators:
             if current_token:
@@ -89,60 +31,60 @@ def lexer(code):
 # Write a parser
 def parse(tokens):
     ast = []
-    i = 0
-    while i < len(tokens):
-        token = tokens[i]
-        if token == "if":
-            condition = tokens[i + 1]
-            code = parse(tokens[i + 2 :])
-            ast.append(("if", condition, code))
-            i += len(code) + 2
-        elif token == "else":
-            code = parse(tokens[i + 1 :])
-            ast.append(("else", code))
-            break
-        elif token == "while":
-            condition = tokens[i + 1]
-            code = parse(tokens[i + 2 :])
-            ast.append(("while", condition, code))
-            break
-        elif token == "for":
-            variable = tokens[i + 1]
-            start = tokens[i + 3]
-            end = tokens[i + 5]
-            code = parse(tokens[i + 6 :])
-            ast.append(("for", variable, start, end, code))
-            break
-        elif token == "function":
-            name = tokens[i + 1]
-            args = []
-            j = i + 3
-            while tokens[j] != ")":
-                args.append(tokens[j])
-                j += 1
-            code = parse(tokens[j + 2 :])
-            ast.append(("function", name, args, code))
-            break
-        else:
+    stack = []
+    for token in tokens:
+        if token == "(":
+            stack.append(ast)
+            ast = []
+        elif token == ")":
+            node = ast
+            ast = stack.pop()
+            ast.append(node)
+        elif token in keywords:
+            ast.append((token,))
+        elif token in operators:
             ast.append(token)
-        i += 1
+        elif token.isdigit():
+            ast.append(int(token))
+        elif token.isalpha():
+            ast.append(("var", token))
     return ast
 
 
-def debug(ast):
-    for node in ast:
-        print(node)
+def debug(code):
+    tokens = lexer(code)
+    print("Tokens:", tokens)
+    ast = parse(tokens)
+    print("AST:", ast)
+    interpret(ast)
 
 
 def interpret(ast):
     variables = {}
-    for node in ast:
+    i = 0
+    while i < len(ast):
+        node = ast[i]
         if isinstance(node, tuple):
-            if node[0] == "if":
-                if eval_expression(node[1], variables):
+            if node[0] == "function":
+                name = node[1]
+                args = node[2]
+                code = node[3]
+                variables[name] = (args, code)
+        else:
+            if node[0] == "print":
+                print(eval_expression(node[1], variables))
+            elif node[0] == "var":
+                variables[node[1]] = eval_expression(node[2], variables)
+            elif node[0] == "assign":
+                variables[node[1]] = eval_expression(node[2], variables)
+            elif node[0] == "return":
+                return eval_expression(node[1], variables)
+            elif node[0] == "if":
+                condition = eval_expression(node[1], variables)
+                if condition:
                     interpret(node[2])
-                elif node[0] == "else":
-                    interpret(node[1])
+                elif len(node) > 3 and node[3][0] == "else":
+                    interpret(node[3][1])
             elif node[0] == "while":
                 while eval_expression(node[1], variables):
                     interpret(node[2])
@@ -150,26 +92,11 @@ def interpret(ast):
                 variable = node[1]
                 start = eval_expression(node[2], variables)
                 end = eval_expression(node[3], variables)
+                code = node[4]
                 for value in range(start, end + 1):
                     variables[variable] = value
-                    interpret(node[4])
-            elif node[0] == "function":
-                name = node[1]
-                args = node[2]
-                code = node[3]
-                variables[name] = (args, code)
-        else:
-            if node in variables:
-                interpret(variables[node])
-            else:
-                if node[0] == "print":
-                    print(eval_expression(node[1], variables))
-                elif node[0] == "var":
-                    variables[node[1]] = eval_expression(node[2], variables)
-                elif node[0] == "assign":
-                    variables[node[1]] = eval_expression(node[2], variables)
-                elif node[0] == "return":
-                    return eval_expression(node[1], variables)
+                    interpret(code)
+        i += 1
 
 
 def eval_expression(expr, variables):
@@ -218,3 +145,9 @@ def eval_expression(expr, variables):
         )
     else:
         raise Exception("Invalid expression")
+
+
+def run(code):
+    tokens = lexer(code)
+    ast = parse(tokens)
+    debug(ast)

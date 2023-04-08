@@ -1,30 +1,18 @@
-# Token types
-class TokenType:
-    INTEGER = "INTEGER"
-    PLUS = "PLUS"
-    MINUS = "MINUS"
-    MULTIPLY = "MULTIPLY"
-    DIVIDE = "DIVIDE"
-    LPAREN = "LPAREN"
-    RPAREN = "RPAREN"
-    VARIABLE = "VARIABLE"
-    EQUALS = "EQUALS"
-    IF = "IF"
-    ELSE = "ELSE"
-    COLON = "COLON"
-
+from .types import *
 
 # Token class
 class Token:
-    def __init__(self, type_, value):
-        self.type = type_
+    def __init__(self, type, value):
+        self.type = type
         self.value = value
 
+    def __str__(self):
+        return "Token({type}, {value})".format(type=self.type, value=repr(self.value))
+
     def __repr__(self):
-        return f"Token({self.type}, {self.value})"
+        return self.__str__()
 
 
-# Lexer class
 class Lexer:
     def __init__(self, text):
         self.text = text
@@ -73,48 +61,80 @@ class Lexer:
                 continue
 
             if self.current_char.isdigit():
-                return Token(TokenType.INTEGER, self.integer())
+                return (INTEGER, self.integer())
 
             if self.current_char.isalpha():
                 variable = self.variable()
                 if variable == "if":
-                    return Token(TokenType.IF, variable)
+                    return (IF, variable)
                 elif variable == "else":
-                    return Token(TokenType.ELSE, variable)
+                    return (ELSE, variable)
+                elif variable == "fn":
+                    return (FN, variable)
+                elif variable == "class":
+                    return (CLASS, variable)
                 else:
-                    return Token(TokenType.VARIABLE, variable)
+                    return (VARIABLE, variable)
 
             if self.current_char == "+":
                 self.advance()
-                return Token(TokenType.PLUS, "+")
+                return (PLUS, "+")
 
             if self.current_char == "-":
                 self.advance()
-                return Token(TokenType.MINUS, "-")
+                return (MINUS, "-")
 
             if self.current_char == "*":
                 self.advance()
-                return Token(TokenType.MULTIPLY, "*")
+                return (MULTIPLY, "*")
 
             if self.current_char == "/":
                 self.advance()
-                return Token(TokenType.DIVIDE, "/")
+                return (DIVIDE, "/")
 
             if self.current_char == "(":
                 self.advance()
-                return Token(TokenType.LPAREN, "(")
+                return (LPAREN, "(")
 
             if self.current_char == ")":
                 self.advance()
-                return Token(TokenType.RPAREN, ")")
+                return (RPAREN, ")")
 
             if self.current_char == ":":
                 self.advance()
-                return Token(TokenType.COLON, ":")
+                return (COLON, ":")
+
+            if self.current_char == ";":
+                self.advance()
+                return (SEMICOLON, ";")
 
             if self.current_char == "=":
                 self.advance()
-                return Token(TokenType.EQUALS, "=")
+                return (EQUALS, "=")
+
+            if self.current_char == ",":
+                self.advance()
+                return (COMMA, ",")
+
+            if self.current_char == ".":
+                self.advance()
+                return (DOT, ".")
+
+            if self.current_char == "{":
+                self.advance()
+                return (LBRACE, "{")
+
+            if self.current_char == "}":
+                self.advance()
+                return (RBRACE, "}")
+
+            if self.current_char == "-":
+                if self.peek() == ">":
+                    self.advance()
+                    self.advance()
+                    return (ARROW, "->")
+                else:
+                    self.error()
 
             self.error()
 

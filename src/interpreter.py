@@ -1,5 +1,5 @@
 from .lexer import Lexer
-from .parser_1 import Parser
+from .parser import Parser
 
 
 class Interpreter:
